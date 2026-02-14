@@ -1,0 +1,94 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "ASSOCIATE_TOKEN",
+  "description": "Associate a token with a Hedera account so it can receive that token. On Hedera, accounts must explicitly opt-in to receive tokens. If no accountId is provided, associates with the agent's operator account. For third-party accounts, a private key is required.",
+  "category": "fungible",
+  "similes": ["associate token", "link token", "add token", "enable token", "opt in token", "connect token"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TokenAssociateTransaction",
+    "sdkImports": ["TokenAssociateTransaction", "AccountId", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 0.05
+  },
+
+  "sdkMethods": [
+    { "method": "setAccountId", "args": [{ "from": "agent.accountId" }] },
+    { "method": "setTokenIds", "args": [{ "from": "input.tokenId" }] }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Defaults to operator account if no accountId provided",
+      "details": "Uses agent.accountId for setAccountId() when input.accountId is not specified. The operator signs automatically."
+    },
+    {
+      "behavior": "Third-party accounts require freeze + sign workflow",
+      "details": "When accountId differs from operator, the transaction is frozen with freezeWith(), then signed with the third-party's private key before execution."
+    },
+    {
+      "behavior": "Token ID is wrapped in an array for setTokenIds()",
+      "details": "The SDK's setTokenIds() expects an array, but the input is a single tokenId string. The handler wraps it as [input.tokenId]."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "tokenId",
+      "type": "string",
+      "required": true,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The token ID to associate (e.g. 0.0.99999)"
+    },
+    {
+      "name": "accountId",
+      "type": "string",
+      "required": false,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The account to associate the token with. Defaults to the agent's operator account."
+    },
+    {
+      "name": "accountPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Private key of the target account (required for third-party accounts)"
+    }
+  ],
+
+  "preflightChecks": [
+    {
+      "check": "Third-party account requires a private key",
+      "type": "key_required",
+      "failError": "SIGNATURE_REQUIRED",
+      "failDetails": "Third-party account requires a private key. The transaction will fail without it."
+    }
+  ],
+
+  "successData": [
+    { "name": "tokenId", "type": "string", "source": "input", "describe": "The associated token ID" },
+    { "name": "accountId", "type": "string", "source": "computed", "describe": "The account the token was associated with" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT", "error": "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT", "details": "This token is already associated with this account." },
+    { "hederaStatus": "INVALID_ACCOUNT_ID", "error": "INVALID_ACCOUNT_ID", "details": "The account ID does not exist on this network." },
+    { "hederaStatus": "INVALID_TOKEN_ID", "error": "INVALID_TOKEN_ID", "details": "The token ID does not exist on this network." },
+    { "hederaStatus": "TOKENS_PER_ACCOUNT_LIMIT_EXCEEDED", "error": "TOKENS_PER_ACCOUNT_LIMIT_EXCEEDED", "details": "This account has reached its maximum token association limit." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. Check the private key provided." },
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the transaction fee." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

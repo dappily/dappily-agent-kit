@@ -1,0 +1,68 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "DELETE_TOPIC",
+  "description": "Delete a Hedera Consensus Service (HCS) topic. Requires the admin key. This is irreversible — the topic will no longer accept messages and its data becomes inaccessible via the SDK.",
+  "category": "hcs",
+  "similes": ["delete topic", "remove topic", "close topic", "destroy topic"],
+
+  "risk": "destructive",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HCS",
+    "sdkClass": "TopicDeleteTransaction",
+    "sdkImports": ["TopicDeleteTransaction", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator", "admin"],
+    "estimatedFeeHbar": 0.005
+  },
+
+  "sdkMethods": [
+    { "method": "setTopicId", "args": [{ "from": "input.topicId" }] }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Admin key signing via freeze + sign pattern",
+      "details": "If adminPrivateKey is provided, the transaction is frozen with freezeWith() then signed with the admin key. Otherwise the operator key signs automatically (operator must be the admin)."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "topicId",
+      "type": "string",
+      "required": true,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The topic ID to delete"
+    },
+    {
+      "name": "adminPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Admin key (only if different from operator key)"
+    }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "topicId", "type": "string", "source": "input", "describe": "The deleted topic ID" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INVALID_TOPIC_ID", "error": "INVALID_TOPIC_ID", "details": "The topic ID does not exist on this network." },
+    { "hederaStatus": "UNAUTHORIZED", "error": "UNAUTHORIZED", "details": "The provided key is not the admin key for this topic." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. Check the admin key." },
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the transaction fee." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": true
+}

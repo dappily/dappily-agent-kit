@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "types": ["node"]
+  },
+  "include": ["src/index.ts", "src/agent/**/*", "src/actions/**/*", "src/types/**/*", "src/forge/actionSpec.ts", "src/forge/generator.ts", "src/forge/index.ts"],
+  "exclude": ["node_modules", "src/test.ts", "src/integration_test.ts", "src/integration_test_hcs.ts", "src/debug_sdk.ts", "src/forge/validate_specs.ts", "src/forge/generate_from_spec.ts", "src/forge/specs"]
+}

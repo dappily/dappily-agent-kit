@@ -1,0 +1,66 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "HBAR_TRANSFER",
+  "description": "Send HBAR (native cryptocurrency) to another Hedera account.",
+  "category": "core",
+  "similes": ["send hbar", "pay hbar", "transfer hbar", "send money", "transfer funds", "tip hbar"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HBAR",
+    "sdkClass": "TransferTransaction",
+    "sdkImports": ["TransferTransaction", "Hbar", "AccountId", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 0.0001
+  },
+
+  "sdkMethods": [
+    { "method": "addHbarTransfer", "args": [
+      { "from": "agent.accountId" },
+      { "from": "input.amount", "transform": "Hbar.negated" }
+    ]},
+    { "method": "addHbarTransfer", "args": [
+      { "from": "input.to", "transform": "AccountId.fromString" },
+      { "from": "input.amount", "transform": "Hbar.new" }
+    ]},
+    { "method": "setTransactionMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    { "behavior": "Sender gets negated amount, recipient gets positive", "details": "new Hbar(amount).negated() for sender, new Hbar(amount) for recipient." }
+  ],
+
+  "inputs": [
+    { "name": "to", "type": "string", "required": true, "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" }, "describe": "The recipient's Hedera Account ID" },
+    { "name": "amount", "type": "number", "required": true, "constraints": { "min": 0 }, "describe": "Amount of HBAR to send" },
+    { "name": "memo", "type": "string", "required": false, "constraints": { "max": 100 }, "describe": "Optional memo" }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "txId", "type": "string", "source": "response", "compute": "response.transactionId.toString()", "describe": "Transaction ID" },
+    { "name": "from", "type": "string", "source": "computed", "compute": "agent.accountId.toString()", "describe": "Sender account" },
+    { "name": "to", "type": "string", "source": "input", "describe": "Recipient account" },
+    { "name": "amount", "type": "number", "source": "input", "describe": "Amount sent" },
+    { "name": "memo", "type": "string", "source": "input", "describe": "Transaction memo" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "compute": "agent.getExplorerUrl(txId)", "describe": "HashScan URL" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR." },
+    { "hederaStatus": "INVALID_ACCOUNT_ID", "error": "INVALID_ACCOUNT_ID", "details": "Recipient does not exist." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Invalid signature." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

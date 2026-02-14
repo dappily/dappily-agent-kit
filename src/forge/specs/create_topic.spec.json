@@ -1,0 +1,93 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "CREATE_TOPIC",
+  "description": "Create a new topic on the Hedera Consensus Service (HCS). Topics act as message streams — any account (or only authorized ones if a submit key is set) can publish messages. The operator key is used as admin key by default.",
+  "category": "hcs",
+  "similes": ["create topic", "new topic", "create channel", "consensus topic", "hcs topic", "message topic"],
+
+  "risk": "write",
+  "costTier": "medium",
+
+  "hedera": {
+    "service": "HCS",
+    "sdkClass": "TopicCreateTransaction",
+    "sdkImports": ["TopicCreateTransaction", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 0.01
+  },
+
+  "sdkMethods": [
+    { "method": "setAdminKey", "args": [{ "from": "agent.privateKey.publicKey" }] },
+    { "method": "setSubmitKey", "args": [{ "from": "agent.privateKey.publicKey" }], "conditional": { "field": "requireSubmitKey", "when": "provided" } },
+    { "method": "setTopicMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Operator key is set as admin key by default",
+      "details": "Uses agent.privateKey.publicKey for setAdminKey(). A custom admin key can be provided via adminPrivateKey input."
+    },
+    {
+      "behavior": "Submit key is only set when requireSubmitKey is true",
+      "details": "If requireSubmitKey is true, setSubmitKey() is called with either the provided submitPrivateKey's public key or the operator's public key. If false/omitted, the topic is open (anyone can submit)."
+    },
+    {
+      "behavior": "Custom admin key requires additional signing",
+      "details": "When adminPrivateKey is provided, its public key is used for setAdminKey() and the private key signs the transaction after freezeWith()."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "constraints": { "max": 100 },
+      "describe": "Short description of the topic's purpose"
+    },
+    {
+      "name": "requireSubmitKey",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "describe": "If true, only the operator (or provided key) can submit messages. Default: open to all."
+    },
+    {
+      "name": "adminPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Admin key (only if different from operator key)"
+    },
+    {
+      "name": "submitPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Submit key (only if different from operator key). Only used if requireSubmitKey is true."
+    }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "topicId", "type": "string", "source": "receipt", "receiptField": "topicId", "transform": "toString", "describe": "The newly created topic ID" },
+    { "name": "memo", "type": "string", "source": "input", "describe": "The topic memo" },
+    { "name": "hasAdminKey", "type": "boolean", "source": "computed", "describe": "Always true — admin key is always set" },
+    { "name": "hasSubmitKey", "type": "boolean", "source": "computed", "describe": "Whether a submit key was set (based on requireSubmitKey)" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. Check your keys." },
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the transaction fee." },
+    { "hederaStatus": "AUTORENEW_DURATION_NOT_IN_RANGE", "error": "AUTORENEW_DURATION_NOT_IN_RANGE", "details": "The auto-renew duration is outside the allowed range." }
+  ],
+
+  "requiresConfirmation": false,
+  "hasSimulation": true,
+  "irreversible": false
+}

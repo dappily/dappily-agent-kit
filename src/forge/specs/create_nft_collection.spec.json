@@ -1,0 +1,130 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "CREATE_NFT_COLLECTION",
+  "description": "Create a new NFT collection (NonFungibleUnique token) on the Hedera Token Service. The operator key is used as admin and supply key by default. Max supply can optionally be capped.",
+  "category": "nft",
+  "similes": ["create nft collection", "create nft", "launch nft", "deploy nft", "new nft collection", "nft collection", "make nft"],
+
+  "risk": "write",
+  "costTier": "high",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TokenCreateTransaction",
+    "sdkImports": ["TokenCreateTransaction", "TokenType", "TokenSupplyType", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 1
+  },
+
+  "sdkMethods": [
+    { "method": "setTokenName", "args": [{ "from": "input.name" }] },
+    { "method": "setTokenSymbol", "args": [{ "from": "input.symbol" }] },
+    { "method": "setTokenType", "args": [{ "from": "literal:TokenType.NonFungibleUnique" }] },
+    { "method": "setDecimals", "args": [{ "from": "literal:0" }] },
+    { "method": "setInitialSupply", "args": [{ "from": "literal:0" }] },
+    { "method": "setTreasuryAccountId", "args": [{ "from": "agent.accountId" }] },
+    { "method": "setAdminKey", "args": [{ "from": "agent.privateKey.publicKey" }] },
+    { "method": "setSupplyKey", "args": [{ "from": "agent.privateKey.publicKey" }] },
+    { "method": "setSupplyType", "args": [{ "from": "literal:TokenSupplyType.Finite" }], "conditional": { "field": "maxSupply", "when": "provided" } },
+    { "method": "setMaxSupply", "args": [{ "from": "input.maxSupply" }], "conditional": { "field": "maxSupply", "when": "provided" } },
+    { "method": "setTokenMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Operator key is set as both admin and supply key by default",
+      "details": "Uses agent.privateKey.publicKey for setAdminKey() and setSupplyKey(). Custom keys can be provided via adminPrivateKey and supplyPrivateKey inputs."
+    },
+    {
+      "behavior": "Treasury defaults to operator account",
+      "details": "Uses agent.accountId for setTreasuryAccountId(). NFTs are minted to the operator's account."
+    },
+    {
+      "behavior": "Decimals and initial supply are always 0 for NFTs",
+      "details": "NonFungibleUnique tokens must have decimals=0 and initialSupply=0. These are hardcoded."
+    },
+    {
+      "behavior": "Supply type defaults to Infinite when maxSupply is omitted",
+      "details": "If maxSupply is not provided, TokenSupplyType.Infinite is used. If maxSupply is provided, TokenSupplyType.Finite is set along with setMaxSupply()."
+    },
+    {
+      "behavior": "Custom admin/supply keys require additional signing",
+      "details": "When adminPrivateKey or supplyPrivateKey is provided, the public key is extracted for the transaction and the private key is used for signing after freezeWith()."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "constraints": { "min": 1, "max": 100 },
+      "describe": "The human-readable name of the NFT collection"
+    },
+    {
+      "name": "symbol",
+      "type": "string",
+      "required": true,
+      "constraints": { "min": 1, "max": 100 },
+      "describe": "The ticker symbol for the collection (e.g. 'DGEN')"
+    },
+    {
+      "name": "maxSupply",
+      "type": "number",
+      "required": false,
+      "constraints": { "min": 1 },
+      "describe": "Optional max supply cap. Omit for unlimited."
+    },
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "constraints": { "max": 100 },
+      "describe": "Optional memo attached to the collection"
+    },
+    {
+      "name": "adminPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Admin key (only if different from operator key)"
+    },
+    {
+      "name": "supplyPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Supply key (only if different from operator key)"
+    }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "tokenId", "type": "string", "source": "receipt", "receiptField": "tokenId", "describe": "The newly created NFT collection token ID" },
+    { "name": "name", "type": "string", "source": "input", "describe": "The collection name" },
+    { "name": "symbol", "type": "string", "source": "input", "describe": "The collection symbol" },
+    { "name": "type", "type": "string", "source": "computed", "describe": "Token type (NON_FUNGIBLE_UNIQUE)" },
+    { "name": "treasury", "type": "string", "source": "computed", "describe": "The treasury account ID (agent.accountId.toString())" },
+    { "name": "maxSupply", "type": "string", "source": "computed", "describe": "Maximum supply cap or 'unlimited'" },
+    { "name": "hasAdminKey", "type": "boolean", "source": "computed", "describe": "Always true — an admin key is always set" },
+    { "name": "hasSupplyKey", "type": "boolean", "source": "computed", "describe": "Always true — a supply key is always set" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the NFT collection creation fee (~1 HBAR)." },
+    { "hederaStatus": "INVALID_TOKEN_SYMBOL", "error": "INVALID_TOKEN_SYMBOL", "details": "Token symbol is invalid." },
+    { "hederaStatus": "INVALID_TOKEN_NAME", "error": "INVALID_TOKEN_NAME", "details": "Token name is invalid." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. Check your keys." },
+    { "hederaStatus": "INVALID_ACCOUNT_ID", "error": "INVALID_ACCOUNT_ID", "details": "The account ID does not exist on this network." },
+    { "hederaStatus": "TOKEN_WAS_DELETED", "error": "TOKEN_WAS_DELETED", "details": "This token has been deleted." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

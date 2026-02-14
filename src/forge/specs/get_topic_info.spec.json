@@ -1,0 +1,55 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "GET_TOPIC_INFO",
+  "description": "Query information about a Hedera Consensus Service (HCS) topic — memo, sequence number, keys, expiration. Free query.",
+  "category": "hcs",
+  "similes": ["topic info", "get topic", "check topic", "topic details", "topic status", "hcs info"],
+
+  "risk": "read",
+  "costTier": "free",
+
+  "hedera": {
+    "service": "HCS",
+    "sdkClass": "TopicInfoQuery",
+    "sdkImports": ["TopicInfoQuery"],
+    "networkCallType": "query",
+    "requiresSigning": false,
+    "requiredKeys": [],
+    "estimatedFeeHbar": 0
+  },
+
+  "sdkMethods": [
+    { "method": "setTopicId", "args": [{ "from": "input.topicId" }] }
+  ],
+
+  "computedFields": [
+    { "name": "hasAdminKey", "type": "boolean", "from": "result.adminKey", "op": "notNull" },
+    { "name": "hasSubmitKey", "type": "boolean", "from": "result.submitKey", "op": "notNull" }
+  ],
+
+  "inputs": [
+    { "name": "topicId", "type": "string", "required": true, "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" }, "describe": "The topic ID to query" }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "topicId", "type": "string", "source": "query_result", "queryField": "topicId", "transform": "toString", "describe": "Topic ID" },
+    { "name": "memo", "type": "string", "source": "query_result", "queryField": "topicMemo", "describe": "Topic memo" },
+    { "name": "sequenceNumber", "type": "string", "source": "query_result", "queryField": "sequenceNumber", "transform": "toString", "describe": "Message count" },
+    { "name": "hasAdminKey", "type": "boolean", "source": "computed", "describe": "Whether admin key is set" },
+    { "name": "hasSubmitKey", "type": "boolean", "source": "computed", "describe": "Whether submit key is set" },
+    { "name": "expirationTime", "type": "string", "source": "query_result", "queryField": "expirationTime", "transform": "toString", "describe": "Expiration timestamp" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INVALID_TOPIC_ID", "error": "INVALID_TOPIC_ID", "details": "Topic does not exist." }
+  ],
+
+  "requiresConfirmation": false,
+  "hasSimulation": false,
+  "irreversible": false
+}

@@ -1,0 +1,66 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "TRANSFER_TOKEN",
+  "description": "Transfer fungible tokens (HTS) from the agent's account to a recipient. The recipient must have previously associated the token.",
+  "category": "fungible",
+  "similes": ["send token", "transfer token", "pay token", "send fungible", "token transfer", "move token"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TransferTransaction",
+    "sdkImports": ["TransferTransaction", "TokenId", "AccountId", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 0.001
+  },
+
+  "sdkMethods": [
+    { "method": "addTokenTransfer", "args": [
+      { "from": "input.tokenId", "transform": "TokenId.fromString" },
+      { "from": "agent.accountId" },
+      { "from": "input.amount", "transform": "negate" }
+    ]},
+    { "method": "addTokenTransfer", "args": [
+      { "from": "input.tokenId", "transform": "TokenId.fromString" },
+      { "from": "input.to", "transform": "AccountId.fromString" },
+      { "from": "input.amount" }
+    ]},
+    { "method": "setTransactionMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "inputs": [
+    { "name": "tokenId", "type": "string", "required": true, "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" }, "describe": "The token ID to transfer" },
+    { "name": "to", "type": "string", "required": true, "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" }, "describe": "Recipient account ID" },
+    { "name": "amount", "type": "number", "required": true, "constraints": { "int": true, "min": 1 }, "describe": "Amount of tokens to transfer" },
+    { "name": "memo", "type": "string", "required": false, "constraints": { "max": 100 }, "describe": "Optional memo" }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "txId", "type": "string", "source": "response", "compute": "response.transactionId.toString()", "describe": "Transaction ID" },
+    { "name": "tokenId", "type": "string", "source": "input", "describe": "Token ID" },
+    { "name": "from", "type": "string", "source": "computed", "compute": "agent.accountId.toString()", "describe": "Sender" },
+    { "name": "to", "type": "string", "source": "input", "describe": "Recipient" },
+    { "name": "amount", "type": "number", "source": "input", "describe": "Amount transferred" },
+    { "name": "memo", "type": "string", "source": "input", "describe": "Memo" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "compute": "agent.getExplorerUrl(txId)", "describe": "HashScan URL" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT", "error": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT", "details": "Recipient has not associated this token." },
+    { "hederaStatus": "INSUFFICIENT_TOKEN_BALANCE", "error": "INSUFFICIENT_TOKEN_BALANCE", "details": "Sender does not have enough tokens." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Invalid signature." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

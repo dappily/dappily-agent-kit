@@ -1,0 +1,96 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "SUBMIT_MESSAGE",
+  "description": "Submit a message to a Hedera Consensus Service (HCS) topic. Messages are immutably recorded with a consensus timestamp and sequence number. If the topic has a submit key, the corresponding key must be provided.",
+  "category": "hcs",
+  "similes": ["submit message", "send message", "post message", "publish message", "hcs message", "topic message", "consensus message"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HCS",
+    "sdkClass": "TopicMessageSubmitTransaction",
+    "sdkImports": ["TopicMessageSubmitTransaction", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 0.0001
+  },
+
+  "sdkMethods": [
+    { "method": "setTopicId", "args": [{ "from": "input.topicId" }] },
+    { "method": "setMessage", "args": [{ "from": "input.message" }] },
+    { "method": "setTransactionMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Submit key signing via freeze + sign pattern",
+      "details": "If submitPrivateKey is provided, the transaction is frozen with freezeWith() then signed with the submit key. Required when the topic has a submit key that differs from the operator."
+    },
+    {
+      "behavior": "Sequence number returned from receipt",
+      "details": "After successful submission, receipt.topicSequenceNumber contains the sequence number assigned to this message."
+    },
+    {
+      "behavior": "Large messages are chunked automatically by the SDK",
+      "details": "Messages exceeding 1KB are split into chunks by TopicMessageSubmitTransaction. This costs more but is handled transparently."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "topicId",
+      "type": "string",
+      "required": true,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The topic ID to submit the message to"
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "required": true,
+      "constraints": { "min": 1 },
+      "describe": "The message content (text or base64-encoded binary)"
+    },
+    {
+      "name": "submitPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Submit key (required if the topic has a submit key and it differs from operator key)"
+    },
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "constraints": { "max": 100 },
+      "describe": "Optional transaction memo"
+    }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "topicId", "type": "string", "source": "input", "describe": "The topic ID the message was submitted to" },
+    { "name": "sequenceNumber", "type": "string", "source": "receipt", "receiptField": "topicSequenceNumber", "describe": "The sequence number assigned to the message" },
+    { "name": "message", "type": "string", "source": "input", "describe": "The submitted message content" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INVALID_TOPIC_ID", "error": "INVALID_TOPIC_ID", "details": "The topic ID does not exist on this network." },
+    { "hederaStatus": "TOPIC_EXPIRED", "error": "TOPIC_EXPIRED", "details": "This topic has expired and no longer accepts messages." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. This topic likely requires a submit key." },
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the transaction fee." },
+    { "hederaStatus": "INVALID_CHUNK_NUMBER", "error": "INVALID_CHUNK_NUMBER", "details": "Message chunking error. Try a smaller message." },
+    { "hederaStatus": "MESSAGE_SIZE_TOO_LARGE", "error": "MESSAGE_SIZE_TOO_LARGE", "details": "Message exceeds the maximum allowed size." }
+  ],
+
+  "requiresConfirmation": false,
+  "hasSimulation": true,
+  "irreversible": false
+}

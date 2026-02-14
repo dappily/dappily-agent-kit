@@ -1,0 +1,121 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "CREATE_TOKEN",
+  "description": "Create a new fungible token on the Hedera Token Service (HTS). The agent's operator account is used as the treasury by default. The operator key is set as both admin key and supply key, enabling future mint/burn operations.",
+  "category": "fungible",
+  "similes": ["create token", "launch token", "deploy token", "make token", "new token", "token factory"],
+
+  "risk": "write",
+  "costTier": "high",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TokenCreateTransaction",
+    "sdkImports": ["TokenCreateTransaction", "TokenType", "TokenSupplyType", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 1
+  },
+
+  "sdkMethods": [
+    { "method": "setTokenName", "args": [{ "from": "input.name" }] },
+    { "method": "setTokenSymbol", "args": [{ "from": "input.symbol" }] },
+    { "method": "setDecimals", "args": [{ "from": "input.decimals" }] },
+    { "method": "setInitialSupply", "args": [{ "from": "input.initialSupply" }] },
+    { "method": "setTreasuryAccountId", "args": [{ "from": "agent.accountId" }] },
+    { "method": "setAdminKey", "args": [{ "from": "agent.privateKey.publicKey" }] },
+    { "method": "setSupplyKey", "args": [{ "from": "agent.privateKey.publicKey" }] },
+    { "method": "setTokenType", "args": [{ "from": "literal:TokenType.FungibleCommon" }] },
+    { "method": "setSupplyType", "args": [{ "from": "literal:TokenSupplyType.Infinite" }] },
+    { "method": "setTokenMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Operator key is set as both admin and supply key automatically",
+      "details": "Uses agent.privateKey.publicKey for setAdminKey() and setSupplyKey()."
+    },
+    {
+      "behavior": "Treasury defaults to operator account",
+      "details": "Uses agent.accountId for setTreasuryAccountId()."
+    },
+    {
+      "behavior": "Supply type is always Infinite",
+      "details": "TokenSupplyType.Infinite is hardcoded."
+    },
+    {
+      "behavior": "Decimals defaults to 0 if not provided",
+      "details": "Zod schema has .default(0) on decimals."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "constraints": { "min": 1, "max": 100 },
+      "describe": "The human-readable name of the token (e.g. 'Dappily Coin')"
+    },
+    {
+      "name": "symbol",
+      "type": "string",
+      "required": true,
+      "constraints": { "min": 1, "max": 20 },
+      "describe": "The ticker symbol for the token (e.g. 'DAPP')"
+    },
+    {
+      "name": "decimals",
+      "type": "number",
+      "required": false,
+      "default": 0,
+      "constraints": { "min": 0, "max": 18, "int": true },
+      "describe": "Number of decimal places (default 0, max 18)"
+    },
+    {
+      "name": "initialSupply",
+      "type": "number",
+      "required": true,
+      "constraints": { "min": 0, "int": true },
+      "describe": "Initial supply of the token (in the smallest unit)"
+    },
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "constraints": { "max": 100 },
+      "describe": "Optional memo attached to the token"
+    }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "tokenId", "type": "string", "source": "receipt", "receiptField": "tokenId", "transform": "toString", "describe": "The newly created token ID" },
+    { "name": "txId", "type": "string", "source": "response", "compute": "response.transactionId.toString()", "describe": "Transaction ID" },
+    { "name": "name", "type": "string", "source": "input", "describe": "The token name" },
+    { "name": "symbol", "type": "string", "source": "input", "describe": "The token symbol" },
+    { "name": "decimals", "type": "number", "source": "input", "describe": "Number of decimal places" },
+    { "name": "initialSupply", "type": "number", "source": "input", "describe": "Initial supply of the token" },
+    { "name": "treasury", "type": "string", "source": "computed", "compute": "agent.accountId.toString()", "describe": "The treasury account ID" },
+    { "name": "hasAdminKey", "type": "boolean", "source": "computed", "compute": "true", "describe": "Whether an admin key was set" },
+    { "name": "hasSupplyKey", "type": "boolean", "source": "computed", "compute": "true", "describe": "Whether a supply key was set" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "compute": "agent.getExplorerUrl(txId)", "describe": "HashScan transaction URL" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the token creation fee (~1 HBAR)." },
+    { "hederaStatus": "INVALID_TOKEN_SYMBOL", "error": "INVALID_TOKEN_SYMBOL", "details": "Token symbol is invalid." },
+    { "hederaStatus": "INVALID_TOKEN_NAME", "error": "INVALID_TOKEN_NAME", "details": "Token name is invalid." },
+    { "hederaStatus": "TOKENS_PER_ACCOUNT_LIMIT_EXCEEDED", "error": "TOKENS_PER_ACCOUNT_LIMIT_EXCEEDED", "details": "The treasury account has reached its token association limit." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. Check your operator key." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

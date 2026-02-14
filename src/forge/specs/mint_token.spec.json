@@ -1,0 +1,98 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "MINT_TOKEN",
+  "description": "Mint additional fungible tokens, increasing the total supply. The token must have been created with a supply key. By default, the agent's operator key is used to sign. For tokens where the supply key differs, provide it via supplyPrivateKey.",
+  "category": "fungible",
+  "similes": ["mint token", "mint tokens", "increase supply", "create more tokens", "add supply"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TokenMintTransaction",
+    "sdkImports": ["TokenMintTransaction", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator", "supply"],
+    "estimatedFeeHbar": 0.001
+  },
+
+  "sdkMethods": [
+    { "method": "setTokenId", "args": [{ "from": "input.tokenId" }] },
+    { "method": "setAmount", "args": [{ "from": "input.amount" }] },
+    { "method": "setTransactionMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Supply key signing via freeze + sign pattern",
+      "details": "If supplyPrivateKey is provided, the transaction is frozen with freezeWith() then signed with the supply key. Otherwise operator key signs automatically."
+    },
+    {
+      "behavior": "Receipt provides new total supply",
+      "details": "After a successful mint, receipt.totalSupply contains the updated total supply of the token."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "tokenId",
+      "type": "string",
+      "required": true,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The token ID to mint (e.g. 0.0.99999)"
+    },
+    {
+      "name": "amount",
+      "type": "number",
+      "required": true,
+      "constraints": { "min": 1 },
+      "describe": "Amount of tokens to mint (in smallest unit)"
+    },
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "constraints": { "max": 100 },
+      "describe": "Optional memo for the transaction"
+    },
+    {
+      "name": "supplyPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Supply key for the token (only needed if different from operator key)"
+    }
+  ],
+
+  "preflightChecks": [
+    {
+      "check": "Warn on very large mints (>= 1,000,000,000 units)",
+      "type": "amount_threshold",
+      "failError": "LARGE_MINT_WARNING",
+      "failDetails": "Very large mint detected. Double-check this is intentional."
+    }
+  ],
+
+  "successData": [
+    { "name": "tokenId", "type": "string", "source": "input", "describe": "The minted token ID" },
+    { "name": "amountMinted", "type": "number", "source": "input", "describe": "Amount of tokens minted" },
+    { "name": "newTotalSupply", "type": "string", "source": "receipt", "receiptField": "totalSupply", "describe": "New total supply after minting" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "TOKEN_HAS_NO_SUPPLY_KEY", "error": "TOKEN_HAS_NO_SUPPLY_KEY", "details": "This token was created without a supply key. Minting is permanently disabled." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. The supply key doesn't match." },
+    { "hederaStatus": "INVALID_TOKEN_ID", "error": "INVALID_TOKEN_ID", "details": "The token ID does not exist on this network." },
+    { "hederaStatus": "TOKEN_WAS_DELETED", "error": "TOKEN_WAS_DELETED", "details": "This token has been deleted and can no longer be minted." },
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the transaction fee." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

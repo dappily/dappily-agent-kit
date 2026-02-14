@@ -1,0 +1,120 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "MINT_NFT",
+  "description": "Mint one or more NFTs in an existing collection. Each NFT gets its own metadata (base64-encoded, max 100 bytes each). Returns the serial numbers of the newly minted NFTs. The token must have a supply key.",
+  "category": "nft",
+  "similes": ["mint nft", "mint nfts", "create nft", "issue nft", "add nft", "nft mint"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TokenMintTransaction",
+    "sdkImports": ["TokenMintTransaction", "PrivateKey", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator", "supply"],
+    "estimatedFeeHbar": 0.02
+  },
+
+  "sdkMethods": [
+    { "method": "setTokenId", "args": [{ "from": "input.tokenId" }] },
+    { "method": "setMetadata", "args": [{ "from": "input.metadata" }] },
+    { "method": "setTransactionMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Metadata is base64-decoded before passing to SDK",
+      "details": "Each metadata string is decoded from base64 to Uint8Array using Buffer.from(raw, 'base64'). Accepts 'b64:' prefix which is stripped before decoding."
+    },
+    {
+      "behavior": "Each metadata entry validated for size (1-100 bytes)",
+      "details": "Pre-flight checks ensure each decoded metadata is between 1 and 100 bytes. Returns METADATA_TOO_LARGE or METADATA_EMPTY errors."
+    },
+    {
+      "behavior": "Supply key signing via freeze + sign pattern",
+      "details": "If supplyPrivateKey is provided, the transaction is frozen with freezeWith() then signed with the supply key. Otherwise operator key signs automatically."
+    },
+    {
+      "behavior": "Serial numbers extracted from receipt.serials",
+      "details": "After successful mint, receipt.serials contains Long values which are converted to numbers via Number(s.toString())."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "tokenId",
+      "type": "string",
+      "required": true,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The NFT collection token ID"
+    },
+    {
+      "name": "metadata",
+      "type": "string[]",
+      "required": true,
+      "constraints": { "min": 1, "max": 10 },
+      "describe": "Array of base64-encoded metadata strings (1-10 per transaction, max 100 bytes each)"
+    },
+    {
+      "name": "memo",
+      "type": "string",
+      "required": false,
+      "constraints": { "max": 100 },
+      "describe": "Optional transaction memo"
+    },
+    {
+      "name": "supplyPrivateKey",
+      "type": "string",
+      "required": false,
+      "describe": "Supply key for the token (only if different from operator key)"
+    }
+  ],
+
+  "preflightChecks": [
+    {
+      "check": "Each metadata entry decodes to <= 100 bytes",
+      "type": "metadata_size",
+      "failError": "METADATA_TOO_LARGE",
+      "failDetails": "Max 100 bytes per NFT metadata. Shorten it or use an IPFS CID hash instead."
+    },
+    {
+      "check": "Each metadata entry decodes to > 0 bytes",
+      "type": "custom",
+      "failError": "METADATA_EMPTY",
+      "failDetails": "Metadata decoded to 0 bytes. Provide valid base64-encoded content."
+    },
+    {
+      "check": "Metadata array length between 1 and 10",
+      "type": "custom",
+      "failError": "INVALID_BATCH_SIZE",
+      "failDetails": "Mint 1-10 NFTs per transaction."
+    }
+  ],
+
+  "successData": [
+    { "name": "tokenId", "type": "string", "source": "input", "describe": "The NFT collection token ID" },
+    { "name": "serials", "type": "number[]", "source": "receipt", "receiptField": "serials", "describe": "Serial numbers of the newly minted NFTs" },
+    { "name": "count", "type": "number", "source": "computed", "describe": "Number of NFTs minted (serials.length)" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "describe": "HashScan transaction URL via agent.getExplorerUrl(txId)" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "TOKEN_HAS_NO_SUPPLY_KEY", "error": "TOKEN_HAS_NO_SUPPLY_KEY", "details": "This collection has no supply key. NFT minting is permanently disabled." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Transaction signature is invalid. The supply key doesn't match." },
+    { "hederaStatus": "INVALID_TOKEN_ID", "error": "INVALID_TOKEN_ID", "details": "The token ID does not exist on this network." },
+    { "hederaStatus": "TOKEN_WAS_DELETED", "error": "TOKEN_WAS_DELETED", "details": "This collection has been deleted." },
+    { "hederaStatus": "TOKEN_MAX_SUPPLY_REACHED", "error": "TOKEN_MAX_SUPPLY_REACHED", "details": "This collection has reached its maximum supply cap." },
+    { "hederaStatus": "MAX_NFTS_IN_PRICE_REGIME_HAVE_BEEN_MINTED", "error": "MAX_NFTS_IN_PRICE_REGIME_HAVE_BEEN_MINTED", "details": "Network-level NFT minting limit reached for this price regime." },
+    { "hederaStatus": "INSUFFICIENT_PAYER_BALANCE", "error": "INSUFFICIENT_PAYER_BALANCE", "details": "Not enough HBAR to cover the mint fee." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

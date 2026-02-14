@@ -1,0 +1,58 @@
+{
+  "name": "dappily-agent-kit",
+  "version": "0.4.0",
+  "description": "AI agent toolkit for Hedera — 15 actions + self-forging action generator. Spec → Code → Testnet.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npx -p typescript tsc -p tsconfig.build.json",
+    "test": "npx ts-node src/test.ts",
+    "test:integration": "npx ts-node src/integration_test.ts",
+    "forge:validate": "npx ts-node src/forge/validate_specs.ts",
+    "forge:generate": "npx ts-node src/forge/generate_from_spec.ts",
+    "forge:sandbox": "npx ts-node src/forge/sandbox.ts",
+    "forge:sandbox:batch": "npx ts-node src/forge/sandbox_batch.ts",
+    "forge:sandbox:live": "npx ts-node src/forge/sandbox_batch.ts -- --live",
+    "forge:promote": "npx ts-node src/forge/promote.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "hedera",
+    "hts",
+    "nft",
+    "hcs",
+    "agent",
+    "ai",
+    "toolkit",
+    "web3",
+    "dappily",
+    "self-forging",
+    "code-generation"
+  ],
+  "author": "Dappily <hello@dappily.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dappily/dappily-agent-kit"
+  },
+  "dependencies": {
+    "@hashgraph/sdk": "^2.80.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.33",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "@hashgraph/sdk": ">=2.50.0"
+  }
+}

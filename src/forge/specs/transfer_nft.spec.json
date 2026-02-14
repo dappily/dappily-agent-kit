@@ -1,0 +1,61 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "TRANSFER_NFT",
+  "description": "Transfer an NFT (by serial number) to another Hedera account. The recipient must have the collection associated.",
+  "category": "nft",
+  "similes": ["transfer nft", "send nft", "give nft", "move nft", "nft transfer"],
+
+  "risk": "write",
+  "costTier": "low",
+
+  "hedera": {
+    "service": "HTS",
+    "sdkClass": "TransferTransaction",
+    "sdkImports": ["TransferTransaction", "TokenId", "AccountId", "NftId", "Status"],
+    "networkCallType": "transaction",
+    "requiresSigning": true,
+    "requiredKeys": ["operator"],
+    "estimatedFeeHbar": 0.001
+  },
+
+  "sdkMethods": [
+    { "method": "addNftTransfer", "args": [
+      { "from": ["input.tokenId", "input.serial"], "transform": "NftId" },
+      { "from": "agent.accountId" },
+      { "from": "input.to", "transform": "AccountId.fromString" }
+    ]},
+    { "method": "setTransactionMemo", "args": [{ "from": "input.memo" }], "conditional": { "field": "memo", "when": "provided" } }
+  ],
+
+  "inputs": [
+    { "name": "tokenId", "type": "string", "required": true, "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" }, "describe": "NFT collection token ID" },
+    { "name": "serial", "type": "number", "required": true, "constraints": { "int": true, "min": 1 }, "describe": "Serial number of the NFT" },
+    { "name": "to", "type": "string", "required": true, "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" }, "describe": "Recipient account ID" },
+    { "name": "memo", "type": "string", "required": false, "constraints": { "max": 100 }, "describe": "Optional memo" }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "txId", "type": "string", "source": "response", "compute": "response.transactionId.toString()", "describe": "Transaction ID" },
+    { "name": "tokenId", "type": "string", "source": "input", "describe": "Collection ID" },
+    { "name": "serial", "type": "number", "source": "input", "describe": "Serial number" },
+    { "name": "from", "type": "string", "source": "computed", "compute": "agent.accountId.toString()", "describe": "Sender" },
+    { "name": "to", "type": "string", "source": "input", "describe": "Recipient" },
+    { "name": "explorerUrl", "type": "string", "source": "computed", "compute": "agent.getExplorerUrl(txId)", "describe": "HashScan URL" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT", "error": "TOKEN_NOT_ASSOCIATED_TO_ACCOUNT", "details": "Recipient has not associated this NFT collection." },
+    { "hederaStatus": "INVALID_NFT_ID", "error": "INVALID_NFT_ID", "details": "NFT serial does not exist." },
+    { "hederaStatus": "SENDER_DOES_NOT_OWN_NFT_SERIAL_NO", "error": "SENDER_DOES_NOT_OWN_NFT_SERIAL_NO", "details": "Sender does not own this NFT." },
+    { "hederaStatus": "INVALID_SIGNATURE", "error": "INVALID_SIGNATURE", "details": "Invalid signature." }
+  ],
+
+  "requiresConfirmation": true,
+  "hasSimulation": true,
+  "irreversible": false
+}

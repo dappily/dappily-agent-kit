@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tgz
+.env
+.env.*
+forge-report.json
+src/actions/_sandbox_*
+src/actions/_gen_*
+src/actions/_live_*
+src/actions/_compile_check_*
+src/forge/_sandbox_*

@@ -1,0 +1,69 @@
+{
+  "specVersion": 4,
+  "kitVersion": "0.2.0",
+  "sdkVersion": "2.80.0",
+
+  "name": "GET_BALANCE",
+  "description": "Get the HBAR and token balances for a Hedera account. If no account ID is provided, returns the agent's own balance. This is a free query with no transaction fee.",
+  "category": "core",
+  "similes": ["check balance", "get balance", "account balance", "how much hbar", "show balance", "wallet balance"],
+
+  "risk": "read",
+  "costTier": "free",
+
+  "hedera": {
+    "service": "HBAR",
+    "sdkClass": "AccountBalanceQuery",
+    "sdkImports": ["AccountBalanceQuery", "AccountId"],
+    "networkCallType": "query",
+    "requiresSigning": false,
+    "requiredKeys": [],
+    "estimatedFeeHbar": 0
+  },
+
+  "sdkMethods": [
+    { "method": "setAccountId", "args": [{ "from": "agent.accountId" }] }
+  ],
+
+  "implicitBehaviors": [
+    {
+      "behavior": "Defaults to operator account if no accountId provided",
+      "details": "Uses agent.accountId for setAccountId() when input.accountId is not specified."
+    },
+    {
+      "behavior": "Token balances are extracted from balance.toJSON().tokens",
+      "details": "The query result includes a tokens map. Each entry is converted to { tokenId, balance, decimals } format."
+    },
+    {
+      "behavior": "HBAR balance returned as human-readable string",
+      "details": "Uses balance.hbars.toString() which includes the ℏ unit symbol."
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "accountId",
+      "type": "string",
+      "required": false,
+      "constraints": { "regex": "^\\d+\\.\\d+\\.\\d+$" },
+      "describe": "The Hedera Account ID to check (e.g. 0.0.12345). Defaults to the agent's own account."
+    }
+  ],
+
+  "preflightChecks": [],
+
+  "successData": [
+    { "name": "accountId", "type": "string", "source": "computed", "describe": "The account ID that was queried" },
+    { "name": "hbarBalance", "type": "string", "source": "query_result", "queryField": "hbars", "describe": "HBAR balance as a human-readable string" },
+    { "name": "tokens", "type": "object", "source": "query_result", "queryField": "tokens", "describe": "Array of { tokenId, balance, decimals } for associated tokens" }
+  ],
+
+  "errorMap": [
+    { "hederaStatus": "INVALID_ACCOUNT_ID", "error": "INVALID_ACCOUNT_ID", "details": "The account ID does not exist on this network." },
+    { "hederaStatus": "ACCOUNT_DELETED", "error": "ACCOUNT_DELETED", "details": "This account has been deleted." }
+  ],
+
+  "requiresConfirmation": false,
+  "hasSimulation": false,
+  "irreversible": false
+}

@@ -1,6 +1,6 @@
 {
   "name": "dappily-agent-kit",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "AI agent toolkit for Hedera — 15 actions + self-forging action generator. Spec → Code → Testnet.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,6 +19,7 @@
     "forge:sandbox:batch": "npx ts-node src/forge/sandbox_batch.ts",
     "forge:sandbox:live": "npx ts-node src/forge/sandbox_batch.ts -- --live",
     "forge:promote": "npx ts-node src/forge/promote.ts",
+    "forge:spec": "npx ts-node src/forge/architect/specCommand.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

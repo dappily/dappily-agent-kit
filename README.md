@@ -1,12 +1,24 @@
 # 🦞 Dappily Agent Kit
 
-**AI agent toolkit for Hedera — 15 actions + self-forging action generator.**
+**Type what you want. Dappily safely compiles it into a verified Hedera action.**
 
-Give any AI agent the ability to interact with the Hedera network. Define actions as JSON specs, generate working TypeScript automatically.
+15 testnet-verified actions + an AI-powered action synthesis pipeline. Describe a Hedera action in plain English → the system generates a validated spec → produces type-safe TypeScript → compiles it → verifies it on testnet → promotes it to your codebase. The AI never writes code. It fills a constrained form. Everything else is deterministic.
 
-## What's New in 0.3.0: The Forge
+## What's New in 0.5.0: The Architect
 
-The kit now includes a **deterministic action generator**. Write a JSON spec → get a working, type-safe Hedera action with zero manual code.
+The Forge now includes an **AI spec architect**. Describe what you want in English → get a testnet-verified Hedera action.
+
+```bash
+# Describe what you want
+npx ts-node src/forge/architect/specCommand.ts "create a token called DEMO with 1M supply"
+
+# → LLM picks actionKind: create_token
+# → Zod validates the plan
+# → Deterministic spec v4 generated
+# → Ready for sandbox + promote
+```
+
+The LLM never sees the Hedera SDK. It picks from 15 known action lanes and identifies inputs. Everything structural comes from testnet-proven reference specs.
 
 ```typescript
 import { validateSpec, generateAction } from "dappily-agent-kit";
@@ -81,17 +93,19 @@ Every action returns:
 { ok: false, error: "INSUFFICIENT_PAYER_BALANCE", details: "..." }
 ```
 
-## The Forge: Self-Forging Actions
+## The Forge: AI-Constrained Action Synthesis
 
-The Forge is a deterministic code generator that turns JSON specs into working Hedera actions.
+The Forge is a pipeline that turns plain English into verified Hedera actions.
 
 ### How It Works
 
-1. **Spec** — A JSON file describing the action: inputs, SDK methods, transforms, error maps
-2. **Validate** — Zod schema ensures the spec is machine-correct
-3. **Generate** — Deterministic template fill produces TypeScript code
-4. **Compile** — `tsc --strict` verifies type safety
-5. **Test** — Run against Hedera testnet to verify real execution
+1. **Describe** — Tell the architect what you want in English
+2. **Plan** — LLM produces an ActionPlan (Zod-validated, safe-set gated)
+3. **Spec** — Deterministic conversion to ActionSpec v4 from reference templates
+4. **Generate** — Template fill produces TypeScript code (no AI here)
+5. **Compile** — `tsc --strict` verifies type safety
+6. **Test** — Sandbox runs against Hedera testnet
+7. **Promote** — Passes → copied to `src/actions/` with registry update
 
 ### Spec Format (v4)
 
@@ -121,11 +135,23 @@ The Forge is a deterministic code generator that turns JSON specs into working H
 ### CLI
 
 ```bash
+# AI Architect — describe what you want
+npm run forge:spec -- "send HBAR to another wallet"
+npm run forge:spec -- "create a token called DEMO"
+npm run forge:spec -- "burn an NFT" --i-understand    # destructive actions require flag
+
 # Validate all specs
 npm run forge:validate
 
 # Generate an action from a spec
 npm run forge:generate -- specs/create_token.spec.json output.ts
+
+# Sandbox — compile check (default) or full testnet
+npm run forge:sandbox -- path/to/spec.json             # dry-run
+npm run forge:sandbox -- path/to/spec.json --live       # testnet
+
+# Promote — sandbox (live) → copy to actions → update registry
+npm run forge:promote -- path/to/spec.json
 ```
 
 ### 15 Reference Specs
@@ -168,9 +194,16 @@ dappily-agent-kit/
 │   ├── agent/                # HederaAgentKit
 │   ├── actions/              # 15 built-in actions
 │   ├── types/                # ActionResult types
-│   └── forge/                # Self-Forging system
+│   └── forge/                # Action Synthesis Pipeline
 │       ├── actionSpec.ts     # Spec schema (Zod, v4)
 │       ├── generator.ts      # Deterministic code generator
+│       ├── sandbox.ts        # Compile + testnet verification
+│       ├── promote.ts        # Promotion gate (testnet receipt required)
+│       ├── architect/        # AI spec architect
+│       │   ├── specCommand.ts   # CLI entry point
+│       │   ├── actionPlan.ts    # ActionPlan schema + safe set
+│       │   ├── planToSpec.ts    # Deterministic plan → spec converter
+│       │   └── prompt.ts        # System prompt + few-shot examples
 │       └── specs/            # 15 reference specs
 ├── examples/
 ├── dist/
@@ -182,8 +215,9 @@ dappily-agent-kit/
 - [x] 15 actions across HTS, NFT, HCS — all testnet-verified
 - [x] Deterministic action generator (Forge)
 - [x] 15 reference specs (v4 format)
-- [ ] Sandbox runner (automated generate → compile → testnet)
-- [ ] Prompt → Spec (LLM generates specs, generator does the rest)
+- [x] Sandbox runner (automated generate → compile → testnet)
+- [x] AI Spec Architect (English → ActionPlan → Spec → Code)
+- [x] Promotion gate (testnet receipt required)
 - [ ] Mirror Node queries
 - [ ] Framework adapters (Vercel AI, LangChain, MCP)
 - [ ] Wallet signing interface

@@ -9,3 +9,4 @@ src/actions/_gen_*
 src/actions/_live_*
 src/actions/_compile_check_*
 src/forge/_sandbox_*
+src/forge/specs/generated/
